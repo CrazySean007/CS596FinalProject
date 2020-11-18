@@ -18,4 +18,7 @@ These advantages are rarely large enough to trade alone, and transaction costs a
   1. By weakening those models that seem to overfit the data, the model has greater generalization capabilities for out-of-sample (that is, invisible) data. This is achieved by allowing the meta-model to learn which base model predictions perform well (or poorly) outside of the sample, and weighting the models appropriately.
   2. Stack generalization is very suitable for the challenges faced when forecasting in noisy, non-stationary, and unstable financial markets, and helps solve the problem of overfitting
   3. SG is very flexible for all kinds of machine learning ideas for it can utilize different training models as base models. What matters is to create the meta regressor to utilize the advantages and avoid the disadvantages of each trained model.
-<img src="https://img.chainnews.com/material/images/665f1c1e2f04e3408b294292c7b88cd6.jpg-article" width="80%" alt="" />
+
+<div align="center" style="text-align: 'center'">
+  <img src="https://img.chainnews.com/material/images/665f1c1e2f04e3408b294292c7b88cd6.jpg-article#pic_center" width="80%"/>
+</div>
