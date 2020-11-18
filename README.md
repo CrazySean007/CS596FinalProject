@@ -5,7 +5,7 @@ Final project repo of CSCI 596 project
 
 Financial markets are mostly random. However, they are not completely random. There are many small inefficiencies and patterns in the market, which can be identified and used to gain a weak advantage in the market.
 
-These advantages are rarely large enough to trade alone, and transaction costs and overheads can easily cover our revenue. However, when we can combine many of these small advantages, the benefits may be huge!
+These advantages are rarely large enough to trade alone, and transaction costs and overheads can easily cover our revenue. However, when we can combine many of these small advantages so that we may avoid many risks and make benefits.
 
 ## Possible algorithms 
 ### Stacked Generalization
