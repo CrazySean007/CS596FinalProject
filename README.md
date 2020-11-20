@@ -1,4 +1,4 @@
-# CS596FinalProject
+# Stocking price prediction
 Final project repo of CSCI 596 project
 
 ## Background
