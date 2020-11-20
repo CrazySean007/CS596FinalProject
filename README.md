@@ -7,7 +7,7 @@ Final project repo of CSCI 596 project
 
 These advantages are rarely large enough to trade alone, and transaction costs and overheads can easily cover our revenue. However, when we can combine many of these small advantages so that **we may avoid many risks and make benefits**.
 
-<img src="https://pic1.zhimg.com/v2-46987ab76079ac483abcd35bde8aa277_1440w.jpg?source=172ae18b" width="80%"/>
+<img src="https://pic1.zhimg.com/v2-46987ab76079ac483abcd35bde8aa277_1440w.jpg?source=172ae18b" width="40%"/>
 
 ## Structure 
 ### Stacked Generalization
