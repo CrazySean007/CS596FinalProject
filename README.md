@@ -31,15 +31,8 @@ a common model for predicting stock markets, which is building a function to cal
 
 ![image029](http://people.duke.edu/~rnau/regintro_files/image029.png)
 
-#### Gradient Descent
-
-By building a cost function to compare the distance of different , we can find the best [X] for the linear regression model. 
-
-![LR-cost-function-2](https://media.geeksforgeeks.org/wp-content/uploads/LR-cost-function-2.jpg)
-
 ### LSTM
-
-
+Long short-term memory (Long short-term memory, LSTM) is a special RNN, it mainly solves the problem of gradient vanishing and gradient explosion in the training process of long sequences. LSTM can perform better in longer sequences than ordinary RNNs.
 
 ### More Algorithms
 
@@ -51,10 +44,11 @@ Because of the flexibility of the SG model, we can find other algorithms in the 
 
 ### Process:
 
-After getting results of different base algorithms, we can **ensemble them with different weights**. By training the weights with data, the final model will be our results.
-
-The training process can also be helped by the basic algorithms above. However, in this step, we decided to complete it by **PythonMeta**, which is a python module automatically running meta regression.
-
+After getting results of different base algorithms, we can **ensemble them with different weights**. 
+The final process of prediction:
+  1. Each model makes predicitons
+  2. Input the predicitons into meta regressor
+  3. Get a final prediction based on the weights
 
 
 ## Parallel Computing
@@ -63,7 +57,7 @@ The training process can also be helped by the basic algorithms above. However, 
 
 Mpi4py is a module that helps to run MPI in python environments.
 
-This module helps us train and run base algorithms in different nodes, and also keeps the programming language consistent.
+This module helps us train and run base algorithms in parallel.
 
 The document can be found in https://mpi4py.readthedocs.io/en/stable/index.html .
 
@@ -72,14 +66,13 @@ The document can be found in https://mpi4py.readthedocs.io/en/stable/index.html 
 To run CUDA Python, we need to use CUDA Toolkit, which can be found in https://developer.nvidia.com/how-to-cuda-python%20.
 
 
-
 ### CuDNN
 
 The cuDNN is a library developed by NVIDA, which combines CUDA with Deep Neural Network Library. (https://developer.nvidia.com/cudnn) 
 
-#### CuDNNLSTM
+  #### CuDNNLSTM
 
-In this project, we may use CuDNNLSTM, the cuDNN library specifically for LSTM algorithm as we use in the base step.
+  In this project, we may use CuDNNLSTM, the cuDNN library specifically for LSTM algorithm as we use in the base step.
 
 
 
