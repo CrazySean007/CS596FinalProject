@@ -19,7 +19,7 @@ These advantages are rarely large enough to trade alone, and transaction costs a
   2. Stack generalization is very **suitable** for the challenges faced when forecasting in **noisy, non-stationary, and unstable financial markets**, and helps solve the problem of overfitting
   3. SG is **very flexible** for all kinds of machine learning ideas for it can utilize different training models as base models. What matters is to create the meta regressor to utilize the advantages and avoid the disadvantages of each trained model.
 
-<div align="center" style="text-align: 'center'">
+<div align="center">
   <img src="https://img.chainnews.com/material/images/665f1c1e2f04e3408b294292c7b88cd6.jpg-article#pic_center" width="80%"/>
 </div>
 
@@ -38,17 +38,6 @@ Long short-term memory (Long short-term memory, LSTM) is a special RNN, it mainl
 
 Because of the flexibility of the SG model, we can find other algorithms in the future, to enhance this model and make the result more accurate.
 
-
-
-## MetaRegressor
-
-### Process:
-
-After getting results of different base algorithms, we can **ensemble them with different weights**. 
-The final process of prediction:
-  1. Each model makes predicitons
-  2. Input the predicitons into meta regressor
-  3. Get a final prediction based on the weights
 
 
 ## Parallel Computing
