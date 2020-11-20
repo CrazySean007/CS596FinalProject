@@ -59,6 +59,10 @@ Mpi4py is a module that helps to run MPI in python environments.
 
 This module helps us train and run base algorithms in parallel.
 
+<div align="center" style="text-align: 'center'">
+  <img src="mpi4py.png#pic_center" width="80%"/>
+</div>
+
 The document can be found in https://mpi4py.readthedocs.io/en/stable/index.html .
 
 ### Cuda Python
