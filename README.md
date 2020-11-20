@@ -35,6 +35,9 @@ a common model for predicting stock markets, which is building a function to cal
 
 ### LSTM
 Long short-term memory (Long short-term memory, LSTM) is a special RNN, it mainly solves the problem of gradient vanishing and gradient explosion in the training process of long sequences. LSTM can perform better in longer sequences than ordinary RNNs.
+<div align="center">
+  <img src="https://pic4.zhimg.com/80/v2-e4f9851cad426dfe4ab1c76209546827_1440w.jpg#pic_center" width="80%"/>
+</div>
 
 ### More Algorithms
 
