@@ -50,9 +50,7 @@ Mpi4py is a module that helps to run MPI in python environments.
 
 This module helps us train and run base algorithms in parallel.
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/CrazySean007/CS596FinalProject/presentation/images/mpi.jpg?token=ANA3GGJIFN4BM4VPNN5YII27XAO7S#pic_center" width="80%"/>
-</div>
+![MPI usage](images/mpi.jpg)
 
 The document can be found in https://mpi4py.readthedocs.io/en/stable/index.html .
 
