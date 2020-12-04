@@ -9,7 +9,14 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 import matplotlib.pyplot as plt
 
+
 from sklearn.preprocessing import MinMaxScaler
+from mpi4py import MPI
+
+comm = MPI.COMM_WORLD
+size = comm.Get_size()
+rank = comm.Get_rank()
+
 
 def readTrain():
   train = pd.read_csv("data.txt", engine='python')
@@ -88,48 +95,53 @@ def buildManyToOneModel(shape):
 
 start_time=time.time()
 
-train = readTrain()
-train_Aug = augFeatures(train)
-train_norm = normalize(train_Aug)
-# change the last day and next day
-X_train, Y_train = buildTrain(train_norm, 30, 1)
-# X_train, Y_train = shuffle(X_train, Y_train)
-# because no return sequence, Y_train and Y_val shape must be 2 dimension
-X_train, Y_train, X_val, Y_val = splitData(X_train, Y_train, 0.1)
+if rank == 0:
+  train = readTrain()
+  train_Aug = augFeatures(train)
+  train_norm = normalize(train_Aug)
+  # change the last day and next day
+  X_train, Y_train = buildTrain(train_norm, 30, 1)
+  # X_train, Y_train = shuffle(X_train, Y_train)
+  # because no return sequence, Y_train and Y_val shape must be 2 dimension
+  X_train, Y_train, X_val, Y_val = splitData(X_train, Y_train, 0.1)
 
-model = buildManyToOneModel(X_train.shape)
-callback = EarlyStopping(monitor="loss", patience=10, verbose=1, mode="auto")
-model.fit(X_train, Y_train, epochs=1000, batch_size=128, validation_data=(X_val, Y_val), callbacks=[callback])
-# model.fit(X_train, Y_train, epochs=1000, batch_size=128, validation_data=(X_val, Y_val))
+  model = buildManyToOneModel(X_train.shape)
+  callback = EarlyStopping(monitor="loss", patience=10, verbose=1, mode="auto")
+  model.fit(X_train, Y_train, epochs=1000, batch_size=128, validation_data=(X_val, Y_val), callbacks=[callback])
+  # model.fit(X_train, Y_train, epochs=1000, batch_size=128, validation_data=(X_val, Y_val))
 
-end_time=time.time()
-print(end_time-start_time)
+  end_time = time.time()
+  print(end_time - start_time)
 
-Y_val = Y_val.flatten()
-Y_train = Y_train.flatten()
+  Y_val = Y_val.flatten()
+  Y_train = Y_train.flatten()
 
+  trainPredict = model.predict(X_train).flatten()
+  testPredict = model.predict(X_val).flatten()
 
-trainPredict = model.predict(X_train).flatten()
-testPredict = model.predict(X_val).flatten()
+  train_size = trainPredict.size
+  train_x = [i for i in range(train_size)]
+  # print(train_x)
 
+  test_size = testPredict.size
+  test_x = [i for i in range(test_size)]
 
-train_size = trainPredict.size
-train_x = [i for i in range(train_size)]
-print(train_x)
+  plt.figure(1)
+  # plt.plot(train_x, Y_train, label="trainData")
+  # plt.plot(train_x, trainPredict, label="testData")
+  plt.plot(test_x, Y_val, label="trainData")
+  plt.plot(test_x, testPredict, label="testData")
+  plt.xlabel("index")  # 横坐标名字
+  plt.ylabel("Closing price")  # 纵坐标名字
+  plt.legend(loc="best")  # 图例
+  plt.show()
 
-test_size = testPredict.size
-test_x = [i for i in range(test_size)]
+elif rank == 1:
+    s = comm.recv()
+    print("rank %d: %s" % (rank, s))
+else:
+    print("rank %d: idle" % (rank))
 
-
-plt.figure(1)
-# plt.plot(train_x, Y_train, label="trainData")
-# plt.plot(train_x, trainPredict, label="testData")
-plt.plot(test_x,Y_val, label="trainData")
-plt.plot(test_x,testPredict, label="testData")
-plt.xlabel("index")#横坐标名字
-plt.ylabel("Closing price")#纵坐标名字
-plt.legend(loc = "best")#图例
-plt.show()
 
 
 

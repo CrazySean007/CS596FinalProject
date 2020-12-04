@@ -83,6 +83,11 @@ In this project, we may use CuDNNLSTM, the cuDNN library specifically for LSTM a
 
 
 
+## Usage
+
+command for running pi.py：
+    `mpiexec -np 8 python pi.py`
+
 
 
 
