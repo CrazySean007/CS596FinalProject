@@ -30,9 +30,6 @@ def augFeatures(train):
 def normalize(train):
     train = train.drop(["Date"], axis=1)
     train_norm = train.apply(lambda x: (x - np.mean(x)) / (np.max(x) - np.min(x)))
-    # train_norm = scaler.fit_transform(train)
-    # train_norm = pd.DataFrame(train_norm ,columns = ['Open', 'High', 'Low', 'Adj Close', 'Volume', 'year', 'month', 'date',
-    #      'day'])
     return train_norm
 
 

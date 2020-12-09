@@ -1,72 +1,35 @@
 # coding: utf-8
 
 import math
-import matplotlib
-import numpy as np
-import pandas as pd
-
 from datetime import date, datetime, time, timedelta
-from matplotlib import pyplot as plt
 from pylab import rcParams
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
+import pandas as pd
+import numpy as np
+import tensorflow as tf
+import time
+from sklearn.preprocessing import PolynomialFeatures
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten, LSTM, TimeDistributed, RepeatVector
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LassoCV
 
 # Input params #
 stk_path = "./GOOG.csv"
+
+# train : cv : test = 6 : 2 : 2
 test_size = 0.2  # proportion of dataset to be used as test set
 cv_size = 0.2  # proportion of dataset to be used as cross-validation set
 Nmax = 7  # for feature at day t, we use lags from t-1, t-2, ..., t-N as features
-N = 5
+N = 30
 # Nmax is the maximum N we are going to test
 
 
-def lin_regression():
-
-    # # Common functions
-    def get_preds_lin_reg(df, target_col, N, pred_min, offset):
-        """
-        Given a dataframe, get prediction at timestep t using values from t-1, t-2, ..., t-N.
-        Inputs
-            df         : dataframe with the values you want to predict. Can be of any length.
-            target_col : name of the column you want to predict e.g. 'adj_close'
-            N          : get prediction at timestep t using values from t-1, t-2, ..., t-N
-            pred_min   : all predictions should be >= pred_min
-            offset     : for df we only do predictions for df[offset:]. e.g. offset can be size of training set
-        Outputs
-            pred_list  : the predictions for target_col. np.array of length len(df)-offset.
-        """
-        # Create linear regression object
-        regression = LinearRegression(fit_intercept=True)
-
-        pred_list = []
-
-        for i in range(offset, len(df[target_col])):
-            X_train = np.array(range(len(df[target_col][i - N:i])))  # e.g. [0 1 2 3 4]
-            y_train = np.array(df[target_col][i - N:i])  # e.g. [2944 3088 3226 3335 3436]
-            X_train = X_train.reshape(-1, 1)
-            y_train = y_train.reshape(-1, 1)
-            regression.fit(X_train, y_train)  # Train the model
-            pred = regression.predict(N)
-
-            pred_list.append(pred[0][0])  # Predict the footfall using the model
-
-        # If the values are < pred_min, set it to be pred_min
-        pred_list = np.array(pred_list)
-
-        return pred_list
-
-
-    def get_mape(y_true, y_pred):
-        """
-        Compute mean absolute percentage error (MAPE)
-        """
-        y_true, y_pred = np.array(y_true), np.array(y_pred)
-        return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
-
-
+def load_data():
     # # Load data
-
     df = pd.read_csv(stk_path, sep=",")
 
     # Convert Date column to datetime
@@ -78,6 +41,9 @@ def lin_regression():
 
     # Get month of each sample
     df['month'] = df['date'].dt.month
+    df["year"] = df["date"].dt.year
+    df["month"] = df["date"].dt.month
+    df["day"] = df["date"].dt.day
 
     # Sort by datetime
     df.sort_values(by='date', inplace=True, ascending=True)
@@ -91,7 +57,7 @@ def lin_regression():
     # # Split into train, dev and test set
 
     # Get sizes of each of the datasets
-    num_cv = int(cv_size * len(df))
+    num_cv = int(cv_size * len(df))        # train for meta-regressor
     num_test = int(test_size * len(df))
     num_train = len(df) - num_cv - num_test
     print("num_train = " + str(num_train))
@@ -108,71 +74,211 @@ def lin_regression():
     print("train_cv.shape = " + str(train_cv.shape))
     print("test.shape = " + str(test.shape))
 
+    return df, train, cv, train_cv, test, num_cv, num_test, num_train
+
+
+def buildTrain(train, pastDay=30, futureDay=1):
+    X_train, Y_train = [], []
+    for i in range(train.shape[0] - futureDay - pastDay):
+        X_train.append(np.array(train.iloc[i:i + pastDay]))
+        Y_train.append(np.array(train.iloc[i + pastDay:i + pastDay + futureDay]["adj_close"]))
+    return np.array(X_train), np.array(Y_train)
+
+
+def shuffle(X, Y):
+    np.random.seed(10)
+    randomList = np.arange(X.shape[0])
+    np.random.shuffle(randomList)
+    return X[randomList], Y[randomList]
+
+
+def get_mape(y_true, y_pred):
+    """
+    Compute mean absolute percentage error (MAPE)
+    """
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+
+def lin_regression_model():
+
+    def dim3_to_dim2(data):
+        x, y, z = data.shape
+        return data.reshape((x, y * z))
+
+    df, train, cv, train_cv, test, num_cv, num_test, num_train = load_data()
 
     # # Predict using Linear Regression
-
     RMSE = []
     R2 = []
     mape = []
 
-    est_list = get_preds_lin_reg(train_cv, 'adj_close', N, 0, num_train)
+    train = train.drop(["date"], axis=1)
+    cv = cv.drop(["date"], axis=1)
+    test = test.drop(["date"], axis=1)
+    X_train, y_train = buildTrain(train, 30, 1)
+    X_val, y_val = buildTrain(cv, 30, 1)
+    X_test, y_test = buildTrain(test, 30, 1)
 
-    cv['est' + '_N' + str(N)] = est_list
-    RMSE.append(math.sqrt(mean_squared_error(est_list, cv['adj_close'])))
-    R2.append(r2_score(cv['adj_close'], est_list))
-    mape.append(get_mape(cv['adj_close'], est_list))
+    model = LinearRegression(fit_intercept=True)
+    X_train = dim3_to_dim2(X_train)
+    X_val = dim3_to_dim2(X_val)
+    X_test = dim3_to_dim2(X_test)
+    model.fit(X_train, y_train)
 
-    print('RMSE = ' + str(RMSE))
-    print('R2 = ' + str(R2))
-    print('MAPE = ' + str(mape))
-    cv.head()
+    trainPredict = model.predict(X_train).flatten()
+    valPredict = model.predict(X_val).flatten()
+    testPredict = model.predict(X_test).flatten()
 
-    # Set optimum N
-    N_opt = 5
-
-    # # Plot predictions on dev set
-
-    # Plot adjusted close over time
-    rcParams['figure.figsize'] = 10, 8  # width 10, height 8
-
-    ax = train.plot(x='date', y='adj_close', style='b-', grid=True)
-    ax = cv.plot(x='date', y='adj_close', style='y-', grid=True, ax=ax)
-    ax = test.plot(x='date', y='adj_close', style='g-', grid=True, ax=ax)
-    ax = cv.plot(x='date', y='est_N5', style='m-', grid=True, ax=ax)
-    ax.legend(['train', 'dev', 'test', 'predictions with N=5'])
-    ax.set_xlabel("date")
-    ax.set_ylabel("USD")
+    train_size = trainPredict.size
+    train_x = [i for i in range(train_size)]
+    test_size = valPredict.size
+    test_x = [i for i in range(test_size)]
 
 
+    y_val = y_val.flatten()
+    y_train = y_train.flatten()
+    y_test = y_test.flatten()
 
-#Final Model
+    plt.figure(1)
+    plt.plot(test_x, y_val, label="y_val")
+    plt.plot(test_x, valPredict, label="predict")
+    plt.xlabel("index")  # row axios
+    plt.ylabel("Adj Closing price")  # column axios
+    plt.legend(loc="best")  # sample
+    plt.show()
 
-#
-# est_list = get_preds_lin_reg(df, 'adj_close', N_opt, 0, num_train+num_cv)
-# test['est' + '_N' + str(N_opt)] = est_list
-# print("RMSE = %0.3f" % math.sqrt(mean_squared_error(est_list, test['adj_close'])))
-# print("R2 = %0.3f" % r2_score(test['adj_close'], est_list))
-# print("MAPE = %0.3f%%" % get_mape(test['adj_close'], est_list))
-# test.head()
-#
-# # Plot adjusted close over time, only for test set
-# rcParams['figure.figsize'] = 10, 8 # width 10, height 8
-# matplotlib.rcParams.update({'font.size': 14})
-#
-# ax = test.plot(x='date', y='adj_close', style='gx-', grid=True)
-# ax = test.plot(x='date', y='est_N5', style='rx-', grid=True, ax=ax)
-# ax.legend(['test', 'predictions using linear regression'], loc='upper left')
-# ax.set_xlabel("date")
-# ax.set_ylabel("USD")
+    valPredict = pd.DataFrame(valPredict, columns=['est_lin_reg'])
+    testPredict = pd.DataFrame(testPredict, columns=['est_lin_reg'])
+    y_val = pd.DataFrame(y_val, columns=['adj_close'])
+    y_test = pd.DataFrame(y_test, columns=['adj_close'])
+
+    return model, valPredict, testPredict, y_val, y_test
+
+
+def lstm_model():
+
+    def buildManyToOneModel(shape):
+        model = Sequential()
+        model.add(LSTM(10, input_length=shape[1], input_dim=shape[2]))
+        # output shape: (1, 1)
+        model.add(Dense(1))
+        model.compile(loss="mse", optimizer="adam")
+        model.summary()
+        return model
+
+    df, train, cv, train_cv, test, num_cv, num_test, num_train = load_data()
+
+    train = train.drop(["date"], axis=1)
+    cv = cv.drop(["date"], axis=1)
+    test = test.drop(["date"], axis=1)
+    # change the last day and next day
+    X_train, y_train = buildTrain(train, 30, 1)
+    X_val, y_val = buildTrain(cv, 30, 1)
+    X_test, y_test = buildTrain(test, 30, 1)
+
+    model = buildManyToOneModel(X_train.shape)
+    callback = EarlyStopping(monitor="loss", patience=10, verbose=1, mode="auto")
+    model.fit(X_train, y_train, epochs=1000, batch_size=128, validation_data=(X_val, y_val), callbacks=[callback])
+    # model.fit(X_train, y_train, epochs=1000, batch_size=128, validation_data=(X_val, Y_val))
+
+    y_val = y_val.flatten()
+    y_train = y_train.flatten()
+
+    trainPredict = model.predict(X_train).flatten()
+    valPredict = model.predict(X_val).flatten()
+    testPredict = model.predict(X_test).flatten()
+
+    train_size = trainPredict.size
+    train_x = [i for i in range(train_size)]
+    test_size = valPredict.size
+    test_x = [i for i in range(test_size)]
+
+    plt.figure(1)
+    plt.plot(test_x, y_val, label="y_val")
+    plt.plot(test_x, valPredict, label="predict")
+    plt.xlabel("index")  # row axios
+    plt.ylabel("Closing price")  # column axios
+    plt.legend(loc="best")  # sample
+    plt.show()
+
+    valPredict = pd.DataFrame(valPredict, columns=['est_lstm'])
+    testPredict = pd.DataFrame(testPredict, columns=['est_lstm'])
+
+    return model, valPredict, testPredict
+
+
+'''
+    Meta-Regressor: merge two model together
+
+    example: ensemble_model(df_lin, df_lstm, y_val, 'est_lin_reg', 'est', 'adj_close', y_target_col)
+    will return the model that has been trained
+'''
+
+
+def ensemble_model(model1_val,
+                   model1_test,
+                   model2_val,
+                   model2_test,
+                   y_val,
+                   y_test,
+                   model1_target_col,
+                   model2_target_col,
+                   y_target_col):
+
+    # # Common functions
+    def make_walkforward_model(X, y):
+        model = LassoCV(positive=True)
+        X_train = pd.concat([X[model1_target_col], X[model2_target_col]], axis=1)
+        y_train = y.loc[:len(y)]
+        model.fit(X_train, y_train)
+        return model
+
+    def predict(model, X):
+        X_test = pd.concat([X[model1_target_col], X[model2_target_col]], axis=1)
+        return model.predict(X_test).flatten()
+
+    def prepare_Xy(X_raw, y_raw):
+        ''' Utility function to drop any samples without both valid X and y values'''
+        Xy = X_raw.join(y_raw).replace({np.inf: None, -np.inf: None}).dropna()
+        X = Xy.iloc[:, :-1]
+        y = Xy.iloc[:, -1]
+        return X, y
+
+    def get_model_predict(df1, df2, y_data):
+        y = y_data[y_target_col]
+        X = pd.concat([df1[model1_target_col], df2[model2_target_col]], axis=1)
+        print(X)
+        return X, y
+
+    models_X_val, y_val = get_model_predict(model1_val, model2_val, y_val)
+    X_ens, y_ens = prepare_Xy(models_X_val, y_val)
+    ensemble_models = make_walkforward_model(X_ens, y_ens)
+
+    models_X_test, y_test = get_model_predict(model1_test, model2_test, y_test)
+    models_X_test, y_test = prepare_Xy(models_X_test, y_test)
+    testPredict = predict(ensemble_models, models_X_test)
+
+    return ensemble_models, testPredict
+
+
+lin_reg_model, lin_reg_val_predict, lin_reg_test_predict, y_val, y_test = lin_regression_model()
+
+lstm_model, lstm_val_predict, lsmt_test_predict = lstm_model()
+
+
+ensemble_models, testPredict = ensemble_model(lin_reg_val_predict, lin_reg_test_predict, lstm_val_predict,
+               lsmt_test_predict, y_val, y_test, 'est_lin_reg', 'est_lstm', 'adj_close')
+
+
+test_size = testPredict.size
+test_x = [i for i in range(test_size)]
+plt.figure(1)
+plt.plot(test_x, y_test, label="y_test")
+plt.plot(test_x, lin_reg_test_predict, label="lin_predict")
+plt.plot(test_x, lsmt_test_predict, label="lstm_predict")
+plt.plot(test_x, testPredict, label="ensem_predict")
+plt.xlabel("index")  # row axios
+plt.ylabel("Closing price")  # column axios
+plt.legend(loc="best")  # sample
 plt.show()
-
-# Save as csv
-test_lin_reg = cv
-
-test_lin_reg.to_csv("./test_lin_reg.csv")
-
-# # Findings
-# * On the dev set, the lowest RMSE is 1.2 which is achieved using N=1, ie. using value on day t-1 to predict value on day t
-# * On the dev set, the next lowest RMSE is 1.36 which is achieved using N=5, ie. using values from days t-5 to t-1 to predict value on day t
-# * We will use N_opt=5 in this work since our aim here is to use linear regression
-# * On the test set, the RMSE is 1.42 and MAPE is 0.707% using N_opt=5

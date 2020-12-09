@@ -20,6 +20,7 @@ Nmax = 7  # for feature at day t, we use lags from t-1, t-2, ..., t-N as feature
 N = 5
 # Nmax is the maximum N we are going to test
 
+start_time = datetime.timestamp()
 
 # # Common functions
 def get_preds_lin_reg(df, target_col, N, pred_min, offset):
@@ -45,7 +46,7 @@ def get_preds_lin_reg(df, target_col, N, pred_min, offset):
         X_train = X_train.reshape(-1, 1)
         y_train = y_train.reshape(-1, 1)
         regression.fit(X_train, y_train)  # Train the model
-        pred = regression.predict(N)
+        pred = regression.predict(np.array(N).reshape(-1, 1))
 
         pred_list.append(pred[0][0])  # Predict the footfall using the model
 
@@ -169,6 +170,10 @@ test_lin_reg = cv
 
 test_lin_reg.to_csv("./test_lin_reg.csv")
 
+
+end_time = datetime.timestamp();
+
+print(end_time - start_time)
 # # Findings
 # * On the dev set, the lowest RMSE is 1.2 which is achieved using N=1, ie. using value on day t-1 to predict value on day t
 # * On the dev set, the next lowest RMSE is 1.36 which is achieved using N=5, ie. using values from days t-5 to t-1 to predict value on day t
