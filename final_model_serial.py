@@ -265,6 +265,7 @@ lstm_model, lstm_val_predict, lstm_test_predict, y_val, y_test = lstm_model()
 ensemble_models, ensem_test_predict = ensemble_model(lin_reg_val_predict, lin_reg_test_predict, lstm_val_predict,
                                               lstm_test_predict, y_val, y_test, 'est_lin_reg', 'est_lstm', 'adj_close')
 
+
 # #
 RMSE = []
 R2 = []

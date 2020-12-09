@@ -1,6 +1,9 @@
 # coding: utf-8
 
+import math
 from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+from sklearn.metrics import r2_score
 import pandas as pd
 import numpy as np
 import time
@@ -20,9 +23,11 @@ stk_path = "./data/GSPC.csv"
 # train : cv : test = 6 : 2 : 2
 test_size = 0.1  # proportion of dataset to be used as test set
 cv_size = 0.05  # proportion of dataset to be used as cross-validation set
-Nmax = 7  # for feature at day t, we use lags from t-1, t-2, ..., t-N as features
-N = 30
-# Nmax is the maximum N we are going to test
+N = 30  # past days
+
+
+np.random.seed(10)
+
 
 # parameters needed in MPI
 comm = MPI.COMM_WORLD
@@ -87,7 +92,6 @@ def buildTrain(train, pastDay=30, futureDay=1):
 
 
 def shuffle(X, Y):
-    np.random.seed(10)
     randomList = np.arange(X.shape[0])
     np.random.shuffle(randomList)
     return X[randomList], Y[randomList]
@@ -99,6 +103,11 @@ def get_mape(y_true, y_pred):
     """
     y_true, y_pred = np.array(y_true), np.array(y_pred)
     return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+
+def get_smape(y_true, y_pred):
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    return 2.0 * np.mean(np.abs(y_pred - y_true) / (np.abs(y_pred) + np.abs(y_true))) * 100
 
 
 def lin_regression_model():
@@ -117,9 +126,12 @@ def lin_regression_model():
     train = train.drop(["date"], axis=1)
     cv = cv.drop(["date"], axis=1)
     test = test.drop(["date"], axis=1)
-    X_train, y_train = buildTrain(train, 30, 1)
-    X_val, y_val = buildTrain(cv, 30, 1)
-    X_test, y_test = buildTrain(test, 30, 1)
+    X_train, y_train = buildTrain(train, N, 1)
+    X_train, y_train = shuffle(X_train, y_train)
+    X_val, y_val = buildTrain(cv, N, 1)
+    X_val, y_val = shuffle(X_val, y_val)
+    X_test, y_test = buildTrain(test, N, 1)
+    X_test, y_test = shuffle(X_test, y_test)
 
     model = LinearRegression(fit_intercept=True)
     X_train = dim3_to_dim2(X_train)
@@ -174,9 +186,12 @@ def lstm_model():
     cv = cv.drop(["date"], axis=1)
     test = test.drop(["date"], axis=1)
     # change the last day and next day
-    X_train, y_train = buildTrain(train, 30, 1)
-    X_val, y_val = buildTrain(cv, 30, 1)
-    X_test, y_test = buildTrain(test, 30, 1)
+    X_train, y_train = buildTrain(train, N, 1)
+    X_train, y_train = shuffle(X_train, y_train)
+    X_val, y_val = buildTrain(cv, N, 1)
+    X_val, y_val = shuffle(X_val, y_val)
+    X_test, y_test = buildTrain(test, N, 1)
+    X_test, y_test = shuffle(X_test, y_test)
 
     model = buildManyToOneModel(X_train.shape)
     # callback = EarlyStopping(monitor="loss", patience=10, verbose=1, mode="auto")
@@ -205,6 +220,8 @@ def lstm_model():
 
     valPredict = pd.DataFrame(valPredict, columns=['est_lstm'])
     testPredict = pd.DataFrame(testPredict, columns=['est_lstm'])
+    y_val = pd.DataFrame(y_val, columns=['adj_close'])
+    y_test = pd.DataFrame(y_test, columns=['adj_close'])
 
     return model, valPredict, testPredict
 
@@ -259,8 +276,10 @@ def ensemble_model(model1_val,
     models_X_test, y_test = get_model_predict(model1_test, model2_test, y_test)
     models_X_test, y_test = prepare_Xy(models_X_test, y_test)
     testPredict = predict(ensemble_models, models_X_test)
+    testPredict = pd.DataFrame(testPredict, columns=['est_ensem'])
 
     return ensemble_models, testPredict
+
 
 if rank == 0:
 
@@ -296,26 +315,45 @@ if rank == 0:
     # print(
     #     "\n*********************************************\n                    Recv\n*********************************************\n")
     # print("lstm mark1 received")
-    lsmt_test_predict = comm.recv(source=2, tag=7)
-    lsmt_test_predict = pd.DataFrame(lsmt_test_predict, columns = ["est_lstm"])
+    lstm_test_predict = comm.recv(source=2, tag=7)
+    lstm_test_predict = pd.DataFrame(lstm_test_predict, columns = ["est_lstm"])
     # print(
     #     "\n*********************************************\n                    Recv\n*********************************************\n")
     # print("lstm mark12 received")
-    ensemble_models, testPredict = ensemble_model(lin_reg_val_predict, lin_reg_test_predict, lstm_val_predict,
-                                                  lsmt_test_predict, y_val, y_test, 'est_lin_reg', 'est_lstm',
-                                                  'adj_close')
+    ensemble_models, ensem_test_predict = ensemble_model(lin_reg_val_predict, lin_reg_test_predict, lstm_val_predict,
+                                                         lstm_test_predict, y_val, y_test, 'est_lin_reg', 'est_lstm',
+                                                            'adj_close')
 
-    test_size = testPredict.size
+    test_size = ensem_test_predict.size
     test_x = [i for i in range(test_size)]
     plt.figure(1)
     plt.plot(test_x, y_test, label="y_test")
     plt.plot(test_x, lin_reg_test_predict, label="lin_predict")
-    plt.plot(test_x, lsmt_test_predict, label="lstm_predict")
-    plt.plot(test_x, testPredict, label="ensem_predict")
+    plt.plot(test_x, lstm_test_predict, label="lstm_predict")
+    plt.plot(test_x, ensem_test_predict, label="ensem_predict")
     plt.xlabel("index")  # row axios
     plt.ylabel("Closing price")  # column axios
     plt.legend(loc="best")  # sample
     plt.show()
+
+    RMSE = []
+    R2 = []
+    MAPE = []
+    SMAPE = []
+
+    for model_predict in (lin_reg_test_predict, lstm_test_predict, ensem_test_predict):
+        RMSE.append(math.sqrt(mean_squared_error(y_test, model_predict)))
+        R2.append(r2_score(y_test, model_predict))
+        MAPE.append(get_mape(y_test, model_predict))
+        SMAPE.append(get_smape(y_test, model_predict))
+
+    print(lin_reg_test_predict)
+
+    print(lstm_test_predict)
+
+    print(ensem_test_predict)
+
+
 
 
 elif rank == 1:
