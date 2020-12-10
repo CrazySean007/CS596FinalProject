@@ -190,3 +190,9 @@ Efficiency: Speedup / Num_Ranks = 1.95 / 3 = 64.9%
 
 In the future, we can add more machine learning models into the regression-model part to have better prediction and generalization power. Also, the linear model is too fast, which decreases the efficiency because for most of the time, rank 1 which runs linear regression stays idle. So in the future, we can better balance the base models to make the best use of the CPU resources. Most importantly, although CUDA is not used due to the lack of compatible GPUs, we can use CUDA for accelerating training the program, especially Neural Network models.
 
+
+## Acknowledgement
+
+We sincerely appreicate Prof.Nakano for the excellent courses in CSCI596, Fall 2020. We have learnt much about Scientific Computation and Parallel Computing.
+We had a wonderful online schooling experience with you for our last semester. ありがとうございました!
+
