@@ -117,7 +117,7 @@ After getting results of different base algorithms, we can ensemble them with di
 
 ![img](https://lh6.googleusercontent.com/GKOqZA_lc0eQlQZ9y4EUPeIZo8roX7Yqj0xBH1cA2pxQJo-MfQVkQafTlGxfZPm2Q1hREPjapoTDIYI1GmXjzHBzpPcq_vAVffY0yibAZNcy2iY-WTdl5uRk1_Z2AWETR2BMSIe6)
 
-### Shffuling
+### Shuffuling
 
 The reason for Shuffle is to prevent the order of data input from affecting network training. Increase the randomness, improve the generalization performance of the network, avoid the occurrence of regular data, which causes the gradient of the weight update to be too extreme, and avoid over-fitting or under-fitting of the final model.
 
