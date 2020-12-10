@@ -13,7 +13,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.metrics import r2_score
 
 # Input params #
-stk_path = "./GOOG.csv"
+stk_path = "../data/GOOG.csv"
 test_size = 0.2  # proportion of dataset to be used as test set
 cv_size = 0.2  # proportion of dataset to be used as cross-validation set
 Nmax = 7  # for feature at day t, we use lags from t-1, t-2, ..., t-N as features
