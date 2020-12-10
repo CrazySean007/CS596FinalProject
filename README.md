@@ -170,19 +170,19 @@ The new model has smaller RMSE and MSE values for the validation data, indicatin
 
 
 
-|                  | Serial | Parallel (with MPI) |
-| ---------------- | ------ | ------------------- |
-| Running Time (s) | 90.80  | 176.66              |
+|                  | Parallel (with MPI) | Serial |
+| ---------------- | ------------------- | ------ |
+| Running Time (s) | 90.80               | 176.66 |
 
 
 
 Since the linear regression model is extremely fast compared with the LSTM model, we use “sleep(50)” in rank 1 to balance the running time. 
 
-   Speedup: 176.66 / 98.8 = 1.95
+```
+Speedup: 176.66 / 98.8 = 1.95
 
-
-   Efficiency: Speedup / Num_Ranks = 1.95 / 3 = 64.9%
-
+Efficiency: Speedup / Num_Ranks = 1.95 / 3 = 64.9%
+```
 
 
 
